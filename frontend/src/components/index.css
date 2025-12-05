@@ -1,0 +1,121 @@
+/* STATUS & FEATURES - BOLD GLASS UPGRADE */
+.status-card {
+  @apply glass bg-white/15 backdrop-blur-xl p-10 rounded-3xl shadow-2xl border border-white/30 
+         hover:shadow-3xl hover:-translate-y-3 transition-all duration-500 relative overflow-hidden;
+}
+
+.status-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00f5ff, transparent);
+}
+
+.status-header {
+  @apply text-4xl font-black text-white mb-10 bg-gradient-to-r from-white to-cyan-300 bg-clip-text 
+         text-transparent drop-shadow-2xl tracking-tight -mb-2 z-10 relative;
+}
+
+.status-live {
+  @apply flex items-center gap-6 mb-10 p-8 bg-white/10 backdrop-blur-xl rounded-3xl border border-cyan-400/30 shadow-xl;
+}
+
+.status-dot {
+  @apply relative flex h-12 w-12;
+}
+
+.status-dot-ping {
+  @apply animate-ping absolute inset-0 rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 opacity-75 shadow-lg;
+}
+
+.status-dot-core {
+  @apply relative inset-0 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 shadow-2xl ring-8 ring-emerald-400/40;
+}
+
+.status-text {
+  @apply text-3xl font-black text-white drop-shadow-2xl tracking-tight leading-tight;
+}
+
+.status-subtitle {
+  @apply text-xl font-bold text-emerald-200 drop-shadow-xl tracking-wide uppercase;
+}
+
+.status-desc {
+  @apply text-xl font-bold text-slate-200 backdrop-blur-sm leading-relaxed drop-shadow-xl mt-6 p-6 bg-white/5 rounded-2xl border border-white/20;
+}
+
+/* FEATURES CARD */
+.features-card {
+  @apply glass bg-white/15 backdrop-blur-xl p-10 rounded-3xl shadow-2xl border border-white/30 
+         hover:shadow-3xl hover:-translate-y-3 transition-all duration-500 relative overflow-hidden;
+}
+
+.features-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #ff00ff, transparent);
+}
+
+.features-header {
+  @apply text-4xl font-black text-white mb-10 bg-gradient-to-r from-white to-pink-300 bg-clip-text 
+         text-transparent drop-shadow-2xl tracking-tight -mb-2 z-10 relative;
+}
+
+.feature-item {
+  @apply flex items-center gap-6 p-6 bg-white/10 hover:bg-white/25 backdrop-blur-xl rounded-3xl border border-white/20 
+         hover:border-white/50 hover:shadow-2xl transition-all duration-400 group relative overflow-hidden;
+}
+
+.feature-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.feature-item:hover::before {
+  opacity: 1;
+}
+
+.feature-dot {
+  @apply w-5 h-5 rounded-full shadow-xl flex-shrink-0 relative z-10;
+}
+
+.feature-text {
+  @apply text-2xl font-black text-white drop-shadow-2xl tracking-tight flex-1 relative z-10 leading-tight;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .status-card, .features-card {
+    @apply p-8;
+  }
+  
+  .status-header, .features-header {
+    @apply text-3xl;
+  }
+  
+  .status-text {
+    @apply text-2xl;
+  }
+  
+  .feature-text {
+    @apply text-xl;
+  }
+  
+  .feature-item {
+    @apply p-5 gap-4;
+  }
+}

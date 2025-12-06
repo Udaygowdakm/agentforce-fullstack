@@ -30,7 +30,7 @@ const client = new AgentApiClient(config);
 const httpServer = createServer();
 const wss = new WebSocketServer({ 
   server: httpServer,
-  verifyClient: (info) => {
+  verifyClient: (info: any) => {
     console.log('🔗 Browser origin:', info.origin);
     return true; // Allow all browsers
   }
@@ -59,17 +59,17 @@ wss.on('connection', async (ws: WebSocket) => {
     
     // Frontend expects { message: "text" }
     ws.send(JSON.stringify({
-      message: '🤖 Connected to Salesforce Agentforce! Try: "Article #123" or "What is Agentforce?"'
-    }));
+  message: '🤖 Connected to Salesforce Agentforce! Try: "Article #123"'
+}));
 
   } catch (err: any) {
-    console.error('❌ Salesforce ERROR:', err.message);
-    ws.send(JSON.stringify({ 
-      message: '❌ Failed to connect to Agentforce. Check .env credentials.'
-    }));
-    ws.close();
-    return;
-  }
+  console.error('❌ Salesforce ERROR:', err.message);
+  ws.send(JSON.stringify({ 
+    message: '❌ Failed to connect to Agentforce. Check .env credentials.'
+  }));
+  // ws.close();  // Keep connection alive
+  return;
+}
 
   const closeSessionHandler = async () => {
     if (!isSessionClosed && sessionId) {

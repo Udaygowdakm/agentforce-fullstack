@@ -86,7 +86,9 @@ export const ChatWidget: React.FC = () => {
     console.log('🔄 Attempting WebSocket connection...');
     setConnectionStatus('connecting');
 
-    const wsUrl = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080';
+    const wsUrl = import.meta.env.DEV 
+    ? 'ws://localhost:8080' 
+    : 'wss://agentforce-backend-env.eba-gamrzbkh.us-east-1.elasticbeanstalk.com';
     const socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {

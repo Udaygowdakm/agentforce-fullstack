@@ -74,86 +74,79 @@ export const ChatWidget: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [ws, setWs] = useState<WebSocket | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<
-    'connecting' | 'connected' | 'disconnected'
-  >('connecting');
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const reconnectAttemptsRef = useRef(0);
-  const maxReconnects = 5;
 
-  const connectWebSocket = useCallback(() => {
-    console.log('🔄 Attempting WebSocket connection...');
-    setConnectionStatus('connecting');
+  // ✅ REST API ENDPOINT (No WebSocket!)
+  const getApiUrl = () => {
+    return import.meta.env.DEV 
+      ? 'http://localhost:8080/chat' 
+      : 'https://agentforce-backend-env.eba-gamrzbkh.us-east-1.elasticbeanstalk.com/chat';
+  };
 
-    const wsUrl = import.meta.env.DEV 
-    ? 'ws://localhost:8080' 
-    : 'wss://agentforce-backend-env.eba-gamrzbkh.us-east-1.elasticbeanstalk.com';
-    const socket = new WebSocket(wsUrl);
+  // ✅ Send message via REST API
+  const sendMessage = useCallback(async (message: string) => {
+    setIsLoading(true);
+    try {
+      console.log('🚀 Sending to Agentforce:', message);
+      
+      const response = await fetch(getApiUrl(), {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
+      });
 
-    socket.onopen = () => {
-      console.log('✅ Connected to Agentforce WebSocket proxy');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('📨 Agentforce reply:', data.reply);
+
+      const agentMsg: ChatMessage = {
+        id: `agent-${Date.now()}`,
+        text: data.reply || 'No response received',
+        sender: 'agent',
+        timestamp: Date.now(),
+      };
+
+      setMessages((prev) => [...prev, agentMsg]);
       setConnectionStatus('connected');
-      setWs(socket);
-      reconnectAttemptsRef.current = 0;
-    };
 
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log('📨 Received:', data);
-
-        if (data.message) {
-          const agentMsg: ChatMessage = {
-            id: `agent-${Date.now()}`,
-            text: data.message,
-            sender: 'agent',
-            timestamp: Date.now(),
-          };
-          setMessages((prev) => [...prev, agentMsg]);
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
-      }
-    };
-
-    socket.onclose = (event) => {
-      console.log('❌ WebSocket closed:', event.code, event.reason);
-      setConnectionStatus('disconnected');
-      setWs(null);
-
-      if (reconnectAttemptsRef.current < maxReconnects) {
-        const delay = Math.min(
-          1000 * Math.pow(2, reconnectAttemptsRef.current),
-          30000
-        );
-        console.log(
-          `🔄 Reconnecting in ${delay / 1000}s... (attempt ${
-            reconnectAttemptsRef.current + 1
-          }/${maxReconnects})`
-        );
-        setTimeout(connectWebSocket, delay);
-        reconnectAttemptsRef.current++;
-      } else {
-        console.log('❌ Max reconnect attempts reached. Manual refresh required.');
-      }
-    };
-
-    socket.onerror = (error) => {
-      console.error('❌ WebSocket error:', error);
-    };
+    } catch (error: any) {
+      console.error('❌ REST Chat error:', error.message);
+      
+      const errorMsg: ChatMessage = {
+        id: `error-${Date.now()}`,
+        text: `Error: ${error.message}. Backend is live but check Salesforce credentials.`,
+        sender: 'agent',
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      setConnectionStatus('error');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
+  // Test connection on load
   useEffect(() => {
-    connectWebSocket();
-
-    return () => {
-      if (ws) {
-        ws.close();
+    const testConnection = async () => {
+      try {
+        console.log('🔍 Testing REST connection...');
+        const response = await fetch(getApiUrl().replace('/chat', ''), { method: 'GET' });
+        if (response.ok) {
+          console.log('✅ Backend LIVE:', await response.json());
+          setConnectionStatus('connected');
+        }
+      } catch (error) {
+        console.log('🔍 Backend check failed (normal on first load)');
       }
     };
-  }, [connectWebSocket, ws]);
+    testConnection();
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -161,20 +154,18 @@ export const ChatWidget: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || !ws || connectionStatus !== 'connected') return;
+    if (!input.trim() || isLoading) return;
 
-    const userId = `user-${Date.now()}`;
     const userMsg: ChatMessage = {
-      id: userId,
+      id: `user-${Date.now()}`,
       text: input,
       sender: 'user',
       timestamp: Date.now(),
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    ws.send(JSON.stringify({ message: input }));
+    sendMessage(input);
     setInput('');
-    setIsLoading(true);
   };
 
   const getStatusColor = () => {
@@ -239,8 +230,8 @@ export const ChatWidget: React.FC = () => {
             {connectionStatus === 'connected'
               ? 'Live'
               : connectionStatus === 'connecting'
-              ? 'Connecting...'
-              : 'Offline'}
+              ? 'Ready'
+              : 'Error'}
           </span>
         </div>
       </div>
@@ -386,47 +377,34 @@ export const ChatWidget: React.FC = () => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={
-              connectionStatus !== 'connected'
-                ? 'Connecting...'
-                : 'Ask Agentforce anything...'
-            }
+            placeholder={isLoading ? 'Wait for reply...' : 'Ask Agentforce anything...'}
             style={{
               flex: 1,
               padding: '0.875rem 1.25rem',
               borderRadius: '24px',
-              border: `2px solid ${
-                connectionStatus === 'connected' ? '#e2e8f0' : '#f59e0b'
-              }`,
+              border: `2px solid ${connectionStatus === 'connected' ? '#e2e8f0' : '#f59e0b'}`,
               fontSize: '1rem',
               outline: 'none',
               background: '#ffffff',
               fontWeight: '500',
-              opacity: connectionStatus !== 'connected' ? 0.6 : 1,
+              opacity: isLoading ? 0.6 : 1,
             }}
-            disabled={isLoading || connectionStatus !== 'connected'}
+            disabled={isLoading}
           />
           <button
             type="submit"
-            disabled={!input.trim() || isLoading || connectionStatus !== 'connected'}
+            disabled={!input.trim() || isLoading}
             style={{
               padding: '0.875rem 2rem',
-              background:
-                connectionStatus === 'connected'
-                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                  : '#9ca3af',
+              background: isLoading 
+                ? '#9ca3af' 
+                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: 'white',
               borderRadius: '24px',
               border: 'none',
               fontWeight: '600',
-              cursor:
-                !input.trim() || isLoading || connectionStatus !== 'connected'
-                  ? 'not-allowed'
-                  : 'pointer',
-              opacity:
-                !input.trim() || isLoading || connectionStatus !== 'connected'
-                  ? 0.5
-                  : 1,
+              cursor: (!input.trim() || isLoading) ? 'not-allowed' : 'pointer',
+              opacity: (!input.trim() || isLoading) ? 0.5 : 1,
             }}
           >
             Send →
